@@ -1,7 +1,11 @@
 #ifndef LIBTRI_DETAILS_UV_WRAPPER_HPP
 #define LIBTRI_DETAILS_UV_WRAPPER_HPP
 
-#include <cassert>
+#include <tri/details/uv_check_error.hpp>
+#include <tri/details/tri_assert.hpp>
+
+#include <functional>
+#include <utility>
 
 namespace tri {
 
@@ -39,6 +43,11 @@ public:
         return !m_uv;
     }
 
+    std::size_t hash( ) const noexcept {
+        std::hash< void * > hasher;
+        return hasher( m_uv );
+    }
+
 protected:
     UvWrapper( void *ptr ) :
         m_uv( ptr )
@@ -46,12 +55,12 @@ protected:
     }
 
     void assign( void *ptr ) noexcept {
-        assert( operator!( ) );
+        triassert( operator!( ) );
         m_uv = ptr;
     }
 
     void assign( UvWrapper &&other ) noexcept {
-        assert( operator!( ) );
+        triassert( operator!( ) );
         m_uv = other.m_uv;
         if( m_uv ) {
             other.m_uv = nullptr;
@@ -65,11 +74,11 @@ protected:
         return m_uv;
     }
 
-    void *details( ) noexcept {
+    void *uvdata( ) noexcept {
         return *static_cast< void ** >( m_uv );
     }
 
-    const void *details( ) const noexcept {
+    const void *uvdata( ) const noexcept {
         return static_cast< const void *const * >( m_uv );
     }
 

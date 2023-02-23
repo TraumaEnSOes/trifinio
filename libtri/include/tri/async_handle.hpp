@@ -1,7 +1,8 @@
 #ifndef LIBTRI_ASYNC_HANDLE_HPP
 #define LIBTRI_ASYNC_HANDLE_HPP
 
-#include <cassert>
+#include <tri/details/uv_wrapper.hpp>
+
 #include <functional>
 #include <string_view>
 
@@ -41,9 +42,9 @@ private:
     CloseCB closeCB;
 };
 
-} // namespace details;
+} // namespace details.
 
-class AsyncHandle {
+class AsyncHandle : public details::UvWrapper {
 public:
     enum Type {
         UNKNOWN = 0,
@@ -66,53 +67,33 @@ public:
         FILE
     };
 
-    virtual ~AsyncHandle( );
     AsyncHandle( ) = default;
-    AsyncHandle( const AsyncHandle & ) = delete;
     AsyncHandle( AsyncHandle &&other ) :
-        m_uv( other.m_uv )
+        details::UvWrapper( std::move( other ) )
     {
-        if( m_uv ) {
-            other.m_uv = nullptr;
-        }
     }
-    AsyncHandle &operator=( const AsyncHandle & ) = delete;
     AsyncHandle &operator=( AsyncHandle &&other ) {
         assign( std::move( other ) );
         return *this;
     }
 
-    bool operator==( const AsyncHandle &other ) const noexcept {
-        return m_uv == other.m_uv;
-    }
-    bool operator!=( const AsyncHandle &other ) const noexcept {
-        return m_uv != other.m_uv;
-    }
-
-    operator bool( ) const noexcept {
-        return m_uv;
-    }
-    bool operator!( ) const noexcept {
-        return !m_uv;
-    }
-
     bool isActive( ) const noexcept {
-        assert( operator bool( ) );
+        triassert( operator bool( ) );
 
         return uv_is_active( handle_t( ) );
     }
 
     bool isClosing( ) const noexcept {
-        assert( operator bool( ) );
+        triassert( operator bool( ) );
 
         return uv_is_closing( handle_t( ) );
     }
 
     void close( CloseCB cb = CloseCB( ) ) {
-        assert( operator bool( ) );
+        triassert( operator bool( ) );
 
         if( cb ) {
-            auto &details = *static_cast< details::AsyncHandlePrivate * >( data( ) );
+            auto &details = *static_cast< details::AsyncHandlePrivate * >( uvdata( ) );
             details.closeCB = std::move( cb );
         }
 
@@ -129,26 +110,8 @@ public:
 
 protected:
     AsyncHandle( void *ptr ) :
-        m_uv( ptr )
+        details::UvWrapper( ptr )
     {
-    }
-
-    void *uv( ) noexcept { return m_uv; }
-    const void *uv( ) const noexcept { return m_uv; }
-
-    void *data( ) noexcept { return wrapper( )->data; }
-    const void *data( ) const noexcept { return wrapper( )->data; }
-
-    void assign( AsyncHandle &&other ) noexcept {
-        assert( operator!( ) );
-        m_uv = other.m_uv;
-        if( m_uv ) {
-            other.m_uv = nullptr;
-        }
-    }
-    void assign( void *ptr ) noexcept {
-        assert( operator!( ) );
-        m_uv = ptr;
     }
 
 private:
@@ -158,14 +121,22 @@ private:
     uv_handle_t *handle_t( ) noexcept { return static_cast< uv_handle_t * >( uv( ) ); }
     const uv_handle_t *handle_t( ) const noexcept { return static_cast< const uv_handle_t * >( uv( ) ); }
 
-    details::AsyncHandlePrivate &details( ) noexcept { return *static_cast< details::AsyncHandlePrivate * >( data( ) ); }
-    const details::AsyncHandlePrivate &details( ) const noexcept { return *static_cast< const details::AsyncHandlePrivate * >( data( ) ); }
+    details::AsyncHandlePrivate &details( ) noexcept { return *static_cast< details::AsyncHandlePrivate * >( uvdata( ) ); }
+    const details::AsyncHandlePrivate &details( ) const noexcept { return *static_cast< const details::AsyncHandlePrivate * >( uvdata( ) ); }
 
     static void GlobalCloseCB( uv_handle_t * );
-
-    void *m_uv = nullptr;
 };
 
 } // namespace tri.
+
+namespace std {
+
+template< > struct hash< tri::AsyncHandle > {
+    size_t operator( )( const tri::AsyncHandle &ah ) const noexcept {
+        return ah.hash( );
+    }
+};
+
+}
 
 #endif
