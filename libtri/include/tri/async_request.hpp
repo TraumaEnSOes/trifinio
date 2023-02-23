@@ -5,9 +5,7 @@
 #include <tri/details/uv_check_error.hpp>
 #include <tri/details/uv_wrapper.hpp>
 
-typedef struct uv_req_s uv_req_t;
-
-extern "C" int uv_cancel( uv_req_t *req );
+#include <uv.h>
 
 namespace tri {
 
@@ -15,41 +13,25 @@ class AsyncRequest;
 
 namespace details {
 
-class UvReqWrapper {
-    void* data;
-    uv_req_type type;
-};
-
 } // namespace details.
 
 class AsyncRequest : public details::UvWrapper {
 public:
-    enum class Type : int {
-        UNKNOWN_REQ = 0,
-        REQ,
-        CONNECT,
-        WRITE,
-        SHUTDOWN,
-        UDP_SEND,
-        FS,
-        WORK,
-        GETADDRINFO,
-        GETNAMEINFO,
-    };
+    using Type = uv_req_type;
 
     AsyncRequest( ) = default;
     AsyncRequest( AsyncRequest &&other ) :
         details::UvWrapper( std::move( other ) )
     {
     }
-    AsyncRequest &operator=( const AsyncRequest &other ) {
+    AsyncRequest &operator=( AsyncRequest &&other ) {
         assign( std::move( other ) );
         return *this;
     }
 
     bool cancel( ) noexcept {
         triassert( operator bool( ) );
-        return details::uvCheckError( uv_cancel( req_t( ) ) );
+        return details::CheckUvError( uv_cancel( req_t( ) ) );
     }
 
     Type type( ) const noexcept;

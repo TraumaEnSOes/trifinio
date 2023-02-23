@@ -1,4 +1,6 @@
 #include "tri/application.hpp"
+#include "tri/details/uv_check_error.hpp"
+
 #include "application_private.hpp"
 #include "loop_instance.hpp"
 
@@ -8,22 +10,26 @@
 #include <optional>
 #include <stdexcept>
 
-static std::optional< tri::ApplicationPrivate > StaticApplicationPrivate;
+static std::optional< tri::details::ApplicationPrivate > StaticApplicationPrivate;
 
 namespace tri {
 
 namespace details {
 
+uv_loop_t *LoopInstance( ) noexcept {
+    return &( StaticApplicationPrivate->uvLoop );
+}
+
 Application *ApplicationInstace = nullptr;
 
 } // namespace details.
 
-Application::~Application( ) {
-    for( auto &cb : m_details->onBeforeExit ) {
+Application::~Application( ) noexcept( false ) {
+    for( auto &cb : m_pimpl->onBeforeExit ) {
         cb( );
     }
 
-    uv_loop_close( details::LoopInstance( ) );
+    details::CheckUvError( uv_loop_close( details::LoopInstance( ) ) );
 
     details::ApplicationInstace = nullptr;
 }
@@ -33,8 +39,8 @@ Application::Application( int argc, char **argv ) {
         throw std::logic_error( "More than one instance of tri::Application" );
     }
 
-    StaticApplicationPrivate = tri::ApplicationPrivate( );
-    m_details = &( *StaticApplicationPrivate );
+    StaticApplicationPrivate = tri::details::ApplicationPrivate( );
+    m_pimpl = &( *StaticApplicationPrivate );
 
     details::ApplicationInstance = this;
 
@@ -42,15 +48,15 @@ Application::Application( int argc, char **argv ) {
 }
 
 void Application::configure( ApplicationConfig config ) noexcept {
-    m_details->config = std::move( config );
+    m_pimpl->config = std::move( config );
 }
 
 int Application::exec( ) {
     // Apply uv configuration
-    if( m_details->config.MetricsIdleTime ) {
+    if( m_pimpl->config.metricsIdleTime ) {
         uv_loop_configure( details::LoopInstance( ), uv_loop_option::UV_METRICS_IDLE_TIME );
     }
-    if( m_details->config.ignoreSIGPROF ) {
+    if( m_pimpl->config.ignoreSIGPROF ) {
         uv_loop_configure( details::LoopInstance( ), uv_loop_option::UV_LOOP_BLOCK_SIGNAL, SIGPROF );
     }
 
@@ -68,7 +74,7 @@ void Application::tryQuit( int retCode ) {
 }
 
 void Application::onBeforeExit( std::function< void( ) > cb ) {
-    m_details->onBeforeExit.push_back( std::move( cb ) );
+    m_pimpl->onBeforeExit.push_back( std::move( cb ) );
 }
 
 } // namespace details.

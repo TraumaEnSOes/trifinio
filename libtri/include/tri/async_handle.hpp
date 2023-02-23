@@ -3,20 +3,10 @@
 
 #include <tri/details/uv_wrapper.hpp>
 
+#include <uv.h>
+
 #include <functional>
 #include <string_view>
-
-typedef struct uv_loop_s uv_loop_t;
-typedef struct uv_handle_s uv_handle_t;
-
-extern "C" {
-
-int uv_is_active( const uv_handle_t * );
-int uv_is_closing( const uv_handle_t * );
-void uv_close( uv_handle_t *, void (*)( uv_handle_t * ) );
-const char *uv_handle_type_name( int );
-
-}
 
 namespace tri {
 
@@ -25,12 +15,6 @@ class AsyncHandle;
 using CloseCB = std::function< void( AsyncHandle & ) >;
 
 namespace details {
-
-struct UvHandleWrapper {
-    void *data;
-    uv_loop_t *loop;
-    int type;
-};
 
 class AsyncHandlePrivate {
     friend class ::tri::AsyncHandle;
@@ -46,27 +30,9 @@ private:
 
 class AsyncHandle : public details::UvWrapper {
 public:
-    enum Type {
-        UNKNOWN = 0,
-        ASYNC,
-        CHECK,
-        FS_EVENT,
-        FS_POLL,
-        HANDLE,
-        IDLE,
-        NAMED_PIPE,
-        POLL,
-        PREPARE,
-        PROCESS,
-        STREAM,
-        TCP,
-        TIMER,
-        TTY,
-        UDP,
-        SIGNAL,
-        FILE
-    };
+    using Type = uv_handle_type;
 
+    virtual ~AsyncHandle( );
     AsyncHandle( ) = default;
     AsyncHandle( AsyncHandle &&other ) :
         details::UvWrapper( std::move( other ) )
@@ -101,7 +67,7 @@ public:
     }
 
     Type type( ) const noexcept {
-        return operator bool( ) ? static_cast< Type >( wrapper( )->type ) : Type::UNKNOWN;
+        return operator bool( ) ? handle_t( )->type : Type::UV_UNKNOWN_HANDLE;
     }
 
     std::string_view HandleTypeName( Type t ) {
@@ -115,9 +81,6 @@ protected:
     }
 
 private:
-    details::UvHandleWrapper *wrapper( ) noexcept { return static_cast< details::UvHandleWrapper * >( uv( ) ); }
-    const details::UvHandleWrapper *wrapper( ) const noexcept { return static_cast< const details::UvHandleWrapper * >( uv( ) ); }
-
     uv_handle_t *handle_t( ) noexcept { return static_cast< uv_handle_t * >( uv( ) ); }
     const uv_handle_t *handle_t( ) const noexcept { return static_cast< const uv_handle_t * >( uv( ) ); }
 

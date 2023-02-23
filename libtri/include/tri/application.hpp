@@ -10,9 +10,15 @@
 
 namespace tri {
 
+namespace details {
+
+class ApplicationPrivate;
+
+} // namespace details.
+
 class Application {
 public:
-    ~Application( );
+    ~Application( ) noexcept( false );
     Application( int argc, char **argv );
     Application( const Application & ) = delete;
     Application &operator=( const Application & ) = delete;
@@ -33,7 +39,7 @@ public:
     void onBeforeExit( std::function< void( ) > cb );
 
 private:
-    ApplicationPrivate *m_details;
+    details::ApplicationPrivate *m_pimpl;
 };
 
 } // namespace tri.
