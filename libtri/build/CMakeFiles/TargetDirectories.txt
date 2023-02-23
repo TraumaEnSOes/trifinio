@@ -1,3 +1,0 @@
-/home/juanjo/Trabajos/trifinio/libtri/build/CMakeFiles/tri.dir
-/home/juanjo/Trabajos/trifinio/libtri/build/CMakeFiles/edit_cache.dir
-/home/juanjo/Trabajos/trifinio/libtri/build/CMakeFiles/rebuild_cache.dir
