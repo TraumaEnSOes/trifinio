@@ -132,7 +132,7 @@ private:
 namespace std {
 
 template< > struct hash< tri::AsyncHandle > {
-    size_t operator( )( const tri::AsyncHandle &ah ) const noexcept {
+    std::size_t operator( )( const tri::AsyncHandle &ah ) const noexcept {
         return ah.hash( );
     }
 };

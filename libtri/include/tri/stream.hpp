@@ -4,7 +4,6 @@
 #include <tri/async_handle.hpp>
 #include <tri/async_request.hpp>
 
-#include <cassert>
 #include <cstddef>
 
 typedef struct uv_stream_s uv_stream_t;
@@ -24,6 +23,9 @@ int uv_write( uv_req_t *req, uv_stream_t *handle, const uv_buf_t bufs[], unsigne
 namespace tri {
 
 class AsyncStream;
+class IStream;
+class OStream;
+class IOStream;
 
 using ShutdownCB = std::function< void( AsyncStream &, int ) >;
 using ListenCB = std::function< void( AsyncStream &, int ) >;
@@ -43,8 +45,8 @@ class AsyncStream : public AsyncHandle {
 protected:
     void shutdown( ShutdownCB cb = ShutdownCB( ) ) {
         if( cb ) {
-            auto &details = *static_cast< details::AsyncStreamPrivate * >( data( ) );
-            details.shutdownCB = std::move( cb );
+            auto &dets = details( );
+            dets.shutdownCB = std::move( cb );
         }
 
         uv_shutdown( stream_t( ), GlobalShutdownCB );
@@ -52,8 +54,8 @@ protected:
 
     void listen( int backlog, ListenCB cb = ListenCB( ) ) {
         if( cb ) {
-            auto &details = *static_cast< details::AsyncStreamPrivate * >( data( ) );
-            details.listenCB = std::move( cb );
+            auto &dets = details( );
+            dets.listenCB = std::move( cb );
         }
 
         uv_listen( stream_t( ), backlog, GlobalListenCB );
@@ -61,13 +63,26 @@ protected:
 
     void readStart();
     void readStop( ) noexcept {
-        assert( operator bool( ) );
+        triassert( operator bool( ) );
         uv_read_stop( stream_t( ) );
     }
 
     AsyncRequest write( );
 
 private:
+    details::AsyncStreamPrivate &details( ) LIBTRI_NOEXCEPT {
+        triassert( uv( ) );
+        triassert( uvdata( ) );
+
+        return *static_cast< details::AsyncStreamPrivate * >( uvdata( ) );
+    }
+    const details::AsyncStreamPrivate &details( ) const LIBTRI_NOEXCEPT {
+        triassert( uv( ) );
+        triassert( uvdata( ) );
+
+        return *static_cast< const details::AsyncStreamPrivate * >( uvdata( ) );
+    }
+
     uv_stream_t *stream_t( ) noexcept {
         return reinterpret_cast< uv_stream_t * >( this );
     }

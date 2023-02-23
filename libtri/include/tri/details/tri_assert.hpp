@@ -25,8 +25,10 @@ inline void Assert( bool cond, std::string expr, const char *file, const char *f
 } // namespace tri.
 
 #define triassert( x ) ::tri::details::Assert( (x), #x, __FILE__, __func__, __LINE__ )
+#define LIBTRI_NOEXCEPT
 #else
 #define triassert( x ) (void)0
+#define LIBTRI_NOEXCEPT noexcept
 #endif
 
 #endif
